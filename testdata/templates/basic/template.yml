@@ -1,0 +1,28 @@
+schema: 1
+name: basic
+description: Fixture template
+version: 0.1.0
+
+variables:
+  - name: project_name
+    prompt: Project name
+    default: "{{.dest_name}}"
+  - name: module
+    prompt: Go module path
+    default: "example.com/{{.project_name | kebab}}"
+  - name: license
+    prompt: License
+    choices: [MIT, Apache-2.0, none]
+    default: MIT
+  - name: docker
+    prompt: Include Dockerfile?
+    type: bool
+    default: true
+
+skip:
+  - path: Dockerfile
+    if: "{{not .docker}}"
+
+hooks:
+  post:
+    - echo hello {{.project_name}}

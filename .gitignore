@@ -1,0 +1,20 @@
+dist/
+.env
+
+# Added by git-repo-prep
+out/
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.tfstate*
+*.log
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.claude/settings.local.json

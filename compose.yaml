@@ -1,0 +1,13 @@
+services:
+  dev:
+    build:
+      context: .
+      args:
+        GO_VERSION: "1.27"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment: [APP_NAME, VERSION, COMMIT, ARGS, GOOS, GOARCH]
+    volumes:
+      - .:/src
+      - go-cache:/cache
+volumes:
+  go-cache:
