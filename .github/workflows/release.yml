@@ -1,0 +1,79 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: forge
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Lint and test
+        run: IN_DOCKER=1 make lint test
+
+      - name: Build all platforms
+        run: IN_DOCKER=1 make dist APP_NAME="$APP_NAME" VERSION="$GITHUB_REF_NAME"
+
+      - name: Package and checksum
+        run: |
+          set -eu
+          mkdir release
+          for f in dist/"$APP_NAME"-*; do
+            base=$(basename "$f")
+            case "$base" in
+              *.exe)
+                name=${base%.exe}
+                tmp=$(mktemp -d)
+                cp "$f" "$tmp/$APP_NAME.exe"
+                (cd "$tmp" && zip -q "$GITHUB_WORKSPACE/release/$name.zip" "$APP_NAME.exe")
+                ;;
+              *)
+                tmp=$(mktemp -d)
+                cp "$f" "$tmp/$APP_NAME"
+                tar -C "$tmp" -czf "release/$base.tar.gz" "$APP_NAME"
+                ;;
+            esac
+          done
+          (cd release && sha256sum -- *.tar.gz *.zip > checksums.txt && cat checksums.txt)
+
+      - name: Verify checksums and smoke-test
+        run: |
+          set -eu
+          (cd release && sha256sum -c checksums.txt)
+          tmp=$(mktemp -d)
+          tar -C "$tmp" -xzf "release/$APP_NAME-linux-amd64.tar.gz"
+          out=$("$tmp/$APP_NAME" version)
+          echo "$out"
+          case "$out" in *"$GITHUB_REF_NAME"*) ;; *) echo "version output lacks $GITHUB_REF_NAME" >&2; exit 1 ;; esac
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          flags=""
+          case "$GITHUB_REF_NAME" in *-*) flags="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag $flags
+
+      - name: Verify uploaded assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir verify
+          gh release download "$GITHUB_REF_NAME" --dir verify
+          (cd verify && sha256sum -c checksums.txt)
+          test "$(ls verify | wc -l)" -eq "$(ls release | wc -l)"
