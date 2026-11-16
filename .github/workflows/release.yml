@@ -65,8 +65,12 @@ jobs:
           set -eu
           flags=""
           case "$GITHUB_REF_NAME" in *-*) flags="--prerelease" ;; esac
+          # Release notes: the matching CHANGELOG.md section, else generated notes.
+          ver=${GITHUB_REF_NAME#v}
+          awk -v v="$ver" '/^## \[/ { p = index($0, "[" v "]") == 4; next } p' CHANGELOG.md > notes.md
+          if [ -s notes.md ]; then notes="--notes-file notes.md"; else notes="--generate-notes"; fi
           gh release create "$GITHUB_REF_NAME" release/* \
-            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag $flags
+            --title "$GITHUB_REF_NAME" --verify-tag $notes $flags
 
       - name: Verify uploaded assets
         env:

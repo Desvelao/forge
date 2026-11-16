@@ -1,6 +1,6 @@
 # Project scaffolding CLI
 
-A single static Go binary that creates projects from templates, keeps a local store of templates, and can scaffold straight from a git URL. See `Plan Go project-scaffolding CLI.md` for the design.
+A single static Go binary that creates projects from templates, keeps a local store of templates, and can scaffold straight from a git URL.
 
 The binary's name is injected at build time; `<app>` below stands for it (`forge` in published releases).
 
